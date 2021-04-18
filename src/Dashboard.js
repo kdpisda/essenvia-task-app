@@ -10,7 +10,6 @@ import {
   IconButton,
   Container,
   Grid,
-  Paper,
   Link,
   Dialog,
   DialogContent,
@@ -24,13 +23,15 @@ import SaveIcon from "@material-ui/icons/Save";
 import CloseIcon from "@material-ui/icons/Close";
 import MaterialTable from "material-table";
 import _ from "lodash";
+import { isLoggedIn } from "utils/utilities";
+import { useHistory } from "react-router-dom";
 
 function Copyright() {
   return (
     <Typography variant="body2" color="textSecondary" align="center">
       {"Copyright © "}
-      <Link color="inherit" href="https://material-ui.com/">
-        Your Website
+      <Link color="inherit" href="/">
+        Essenvia
       </Link>{" "}
       {new Date().getFullYear()}
       {"."}
@@ -133,29 +134,9 @@ const Transition = React.forwardRef(function Transition(props, ref) {
   return <Slide direction="up" ref={ref} {...props} />;
 });
 
-const RangeView = ({ cell }) => (
-  <input
-    type="range"
-    value={cell.value}
-    disabled
-    style={{ pointerEvents: "none" }}
-  />
-);
-
-const RangeEdit = ({ cell, onChange }) => (
-  <input
-    type="range"
-    onChange={(e) => {
-      onChange({ ...cell, value: e.target.value });
-    }}
-    value={cell.value || 0}
-    autoFocus
-  />
-);
-
 export default function Dashboard() {
   const classes = useStyles();
-  const [open, setOpen] = React.useState(false);
+  const open = false;
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [sheetData, setSheetData] = React.useState([[]]);
 
@@ -163,20 +144,22 @@ export default function Dashboard() {
   const [sheetColumns, setSheetColumns] = React.useState(0);
   const [sheetMode, setSheetMode] = React.useState("INIT");
 
+  const history = useHistory();
+
   const [selectedImage, setSelectedImage] = React.useState(null);
+
+  React.useEffect(async () => {
+    const hasAlreadyLoggedIn = await isLoggedIn();
+    if (!hasAlreadyLoggedIn) {
+      history.push("/");
+    }
+  });
 
   const createBlankSheet = async () => {
     let column = _.fill(Array(parseInt(sheetColumns)), { value: "" });
     let data = _.fill(Array(parseInt(sheetRows)), column);
     await setSheetData(data);
     await setSheetMode("ADD");
-  };
-
-  const handleDrawerOpen = () => {
-    setOpen(true);
-  };
-  const handleDrawerClose = () => {
-    setOpen(false);
   };
 
   const handleClickOpenDialog = () => {
@@ -305,49 +288,45 @@ export default function Dashboard() {
         <Container maxWidth="lg" className={classes.container}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
-              <Paper className={classes.paper}>
-                <div>
-                  <MaterialTable
-                    title="Recent Items"
-                    columns={[
-                      { title: "Name", field: "name" },
-                      { title: "Surname", field: "surname" },
-                      {
-                        title: "Birth Year",
-                        field: "birthYear",
-                        type: "numeric",
-                      },
-                      {
-                        title: "Birth Place",
-                        field: "birthCity",
-                        lookup: { 34: "İstanbul", 63: "Şanlıurfa" },
-                      },
-                    ]}
-                    data={[
-                      {
-                        name: "Mehmet",
-                        surname: "Baran",
-                        birthYear: 1987,
-                        birthCity: 63,
-                      },
-                      {
-                        name: "Zerya Betül",
-                        surname: "Baran",
-                        birthYear: 2017,
-                        birthCity: 34,
-                      },
-                    ]}
-                    actions={[
-                      {
-                        icon: "save",
-                        tooltip: "Save User",
-                        onClick: (event, rowData) =>
-                          alert("You saved " + rowData.name),
-                      },
-                    ]}
-                  />
-                </div>
-              </Paper>
+              <MaterialTable
+                title="Recent Items"
+                columns={[
+                  { title: "Name", field: "name" },
+                  { title: "Surname", field: "surname" },
+                  {
+                    title: "Birth Year",
+                    field: "birthYear",
+                    type: "numeric",
+                  },
+                  {
+                    title: "Birth Place",
+                    field: "birthCity",
+                    lookup: { 34: "İstanbul", 63: "Şanlıurfa" },
+                  },
+                ]}
+                data={[
+                  {
+                    name: "Mehmet",
+                    surname: "Baran",
+                    birthYear: 1987,
+                    birthCity: 63,
+                  },
+                  {
+                    name: "Zerya Betül",
+                    surname: "Baran",
+                    birthYear: 2017,
+                    birthCity: 34,
+                  },
+                ]}
+                actions={[
+                  {
+                    icon: "save",
+                    tooltip: "Save User",
+                    onClick: (event, rowData) =>
+                      alert("You saved " + rowData.name),
+                  },
+                ]}
+              />
             </Grid>
           </Grid>
 

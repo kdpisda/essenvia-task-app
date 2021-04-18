@@ -10,7 +10,11 @@ import Typography from "@material-ui/core/Typography";
 import { makeStyles } from "@material-ui/core/styles";
 import Container from "@material-ui/core/Container";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import { generateNotificationFunctional, get } from "utils/utilities";
+import {
+  generateNotificationFunctional,
+  get,
+  isLoggedIn,
+} from "utils/utilities";
 import { login } from "utils/apis";
 import { useSnackbar } from "notistack";
 import { useHistory } from "react-router-dom";
@@ -58,6 +62,13 @@ export default function SignIn() {
 
   const history = useHistory();
 
+  React.useEffect(async () => {
+    const hasAlreadyLoggedIn = await isLoggedIn();
+    if (hasAlreadyLoggedIn) {
+      history.push("/dashboard");
+    }
+  });
+
   const submitLoginHandle = async (event) => {
     event.preventDefault();
     await setLoading(true);
@@ -77,6 +88,8 @@ export default function SignIn() {
     if (status !== null && status === 200) {
       const user = get(["data", "user"])(res);
       await localStorage.setItem("user", JSON.stringify(user));
+      await localStorage.setItem("accessToken", res.data.access_token);
+      await localStorage.setItem("refreshToken", res.data.refresh_token);
       history.push("/dashboard");
     }
 
