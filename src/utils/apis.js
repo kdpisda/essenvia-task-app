@@ -100,3 +100,10 @@ export async function submitData(data) {
   formData.append("data", JSON.stringify(data.sheetData));
   return await post("/data/", formData, headers, {});
 }
+
+export async function getDataDetail(pk) {
+  let headers = {
+    Authorization: "Bearer " + (await localStorage.getItem("accessToken")),
+  };
+  return await get("/data/" + pk + "/", headers, {});
+}

@@ -23,10 +23,17 @@ import AddIcon from "@material-ui/icons/Add";
 import SaveIcon from "@material-ui/icons/Save";
 import CloseIcon from "@material-ui/icons/Close";
 import MaterialTable from "material-table";
+import CircularProgress from "@material-ui/core/CircularProgress";
 import _ from "lodash";
-import { isLoggedIn, generateNotificationFunctional } from "utils/utilities";
+import {
+  isLoggedIn,
+  generateNotificationFunctional,
+  popNotificationFunctional,
+  get,
+} from "utils/utilities";
 import { useHistory } from "react-router-dom";
-import { submitData } from "utils/apis";
+import { submitData, getDataDetail } from "utils/apis";
+import { API_SERVER } from "config";
 
 function Copyright() {
   return (
@@ -142,11 +149,16 @@ export default function Dashboard() {
   const open = false;
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [sheetData, setSheetData] = React.useState([[]]);
+  const [dataID, setDataID] = React.useState(null);
 
   const [sheetRows, setSheetRows] = React.useState(0);
   const [sheetColumns, setSheetColumns] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
+  // INIT, ADD, WAIT, DONE
   const [sheetMode, setSheetMode] = React.useState("INIT");
+  const [downloadLink, setDownloadLink] = React.useState(null);
+  const [data, setData] = React.useState({});
+  const [pollInterval, setPollInterval] = React.useState(null);
 
   const history = useHistory();
 
@@ -158,6 +170,32 @@ export default function Dashboard() {
       history.push("/");
     }
   });
+
+  React.useEffect(async () => {
+    if (data["status"] === "FINI") {
+      clearInterval(pollInterval);
+      let pdfFile = data["generated_pdf"];
+      console.log(data);
+      await setDownloadLink(API_SERVER + pdfFile);
+      console.log(downloadLink);
+      await setSheetMode("DONE");
+      await setPollInterval(null);
+    } else if (data["status"] == "FAIL") {
+      clearInterval(pollInterval);
+      popNotificationFunctional(
+        enqueueSnackbar,
+        "Sorry! We could not generate the PDF",
+        "error"
+      );
+    }
+  }, [data]);
+
+  // const checkDataStatusPoll = async () => {
+  //   console.log(dataID);
+  //   const res = await getDataDetail(dataID);
+  //   let data = get(["data"])(res);
+  //   console.log(data);
+  // };
 
   const createBlankSheet = async () => {
     let column = _.fill(Array(parseInt(sheetColumns)), { value: "" });
@@ -188,6 +226,19 @@ export default function Dashboard() {
       "Data Entered Successfully! Generating PDF"
     );
 
+    let status = get(["status"])(res);
+    if (status !== null && status === 201) {
+      const resDataID = get(["data", "data", "id"])(res);
+      await setDataID(resDataID);
+      await setSheetMode("WAIT");
+      const localPollInterval = setInterval(async () => {
+        const res = await getDataDetail(resDataID);
+        const resData = get(["data", "data"])(res);
+        await setData(resData);
+      }, 1000);
+      await setPollInterval(localPollInterval);
+    }
+
     await setLoading(false);
   };
 
@@ -212,8 +263,30 @@ export default function Dashboard() {
             <Typography variant="h6" className={classes.title}>
               Create Entry
             </Typography>
-            <Button autoFocus color="inherit" onClick={handleSaveButton}>
-              save
+            <Button
+              color="inherit"
+              onClick={() => {
+                window.open(downloadLink, "_blank");
+              }}
+              disabled={downloadLink === null && sheetMode != "DONE"}
+            >
+              {sheetMode === "WAIT" ? <CircularProgress /> : "Download PDF"}
+            </Button>
+            <Button
+              color="inherit"
+              onClick={handleSaveButton}
+              disabled={
+                sheetMode === "WAIT" ||
+                sheetMode === "DONE" ||
+                selectedImage === null ||
+                loading ||
+                sheetRows === null ||
+                sheetColumns === null ||
+                parseInt(sheetRows) === 0 ||
+                parseInt(sheetColumns) === 0
+              }
+            >
+              {loading ? <CircularProgress /> : "Save"}
             </Button>
           </Toolbar>
         </AppBar>
@@ -229,7 +302,12 @@ export default function Dashboard() {
               }}
             />
             <label htmlFor="contained-button-file">
-              <Button variant="contained" color="primary" component="span">
+              <Button
+                variant="contained"
+                color="primary"
+                component="span"
+                disabled={loading}
+              >
                 Upload
               </Button>
             </label>
@@ -247,6 +325,7 @@ export default function Dashboard() {
                 onChange={async (event) => {
                   await setSheetRows(event.target.value);
                 }}
+                disabled={loading}
               />{" "}
               <TextField
                 id="columns"
@@ -261,7 +340,9 @@ export default function Dashboard() {
               &nbsp;
               <IconButton
                 aria-label="delete"
-                disabled={sheetColumns == 0 || sheetRows == 0}
+                disabled={
+                  parseInt(sheetColumns) == 0 || parseInt(sheetRows) == 0
+                }
                 onClick={createBlankSheet}
               >
                 <SaveIcon />
