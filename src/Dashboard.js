@@ -17,14 +17,16 @@ import {
   TextField,
   Slide,
 } from "@material-ui/core";
+import { useSnackbar } from "notistack";
 import Spreadsheet from "react-spreadsheet";
 import AddIcon from "@material-ui/icons/Add";
 import SaveIcon from "@material-ui/icons/Save";
 import CloseIcon from "@material-ui/icons/Close";
 import MaterialTable from "material-table";
 import _ from "lodash";
-import { isLoggedIn } from "utils/utilities";
+import { isLoggedIn, generateNotificationFunctional } from "utils/utilities";
 import { useHistory } from "react-router-dom";
+import { submitData } from "utils/apis";
 
 function Copyright() {
   return (
@@ -136,12 +138,14 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 
 export default function Dashboard() {
   const classes = useStyles();
+  const { enqueueSnackbar } = useSnackbar();
   const open = false;
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [sheetData, setSheetData] = React.useState([[]]);
 
   const [sheetRows, setSheetRows] = React.useState(0);
   const [sheetColumns, setSheetColumns] = React.useState(0);
+  const [loading, setLoading] = React.useState(false);
   const [sheetMode, setSheetMode] = React.useState("INIT");
 
   const history = useHistory();
@@ -170,6 +174,23 @@ export default function Dashboard() {
     setDialogOpen(false);
   };
 
+  const handleSaveButton = async () => {
+    await setLoading(true);
+    const data = {
+      selectedImage: selectedImage,
+      sheetData: sheetData,
+    };
+
+    let res = await submitData(data);
+    generateNotificationFunctional(
+      res,
+      enqueueSnackbar,
+      "Data Entered Successfully! Generating PDF"
+    );
+
+    await setLoading(false);
+  };
+
   return (
     <div className={classes.root}>
       <Dialog
@@ -191,7 +212,7 @@ export default function Dashboard() {
             <Typography variant="h6" className={classes.title}>
               Create Entry
             </Typography>
-            <Button autoFocus color="inherit" onClick={handleCloseDialog}>
+            <Button autoFocus color="inherit" onClick={handleSaveButton}>
               save
             </Button>
           </Toolbar>

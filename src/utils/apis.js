@@ -90,3 +90,13 @@ export async function getNewTokens() {
 export async function login(data) {
   return await post("/auth/login/", data, {}, {});
 }
+
+export async function submitData(data) {
+  let headers = {
+    Authorization: "Bearer " + (await localStorage.getItem("accessToken")),
+  };
+  const formData = new FormData();
+  formData.append("file", data.selectedImage);
+  formData.append("data", JSON.stringify(data.sheetData));
+  return await post("/data/", formData, headers, {});
+}
