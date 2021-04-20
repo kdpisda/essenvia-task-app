@@ -458,6 +458,27 @@ export default function Dashboard() {
           >
             <AddIcon />
           </IconButton>
+          <Button
+            color="inherit"
+            onClick={async () => {
+              await setLoading(true);
+              popNotificationFunctional(
+                enqueueSnackbar,
+                "Logging you out...",
+                "warning"
+              );
+              await localStorage.removeItem("accessToken");
+              await localStorage.removeItem("refreshToken");
+              popNotificationFunctional(
+                enqueueSnackbar,
+                "Logged out successfully!",
+                "info"
+              );
+              await setLoading(false);
+            }}
+          >
+            Logout
+          </Button>
         </Toolbar>
       </AppBar>
       <main className={classes.content}>
