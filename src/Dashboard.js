@@ -180,6 +180,11 @@ export default function Dashboard() {
       console.log(downloadLink);
       await setSheetMode("DONE");
       await setPollInterval(null);
+      popNotificationFunctional(
+        enqueueSnackbar,
+        "Congratulations! PDF generated successfully",
+        "success"
+      );
     } else if (data["status"] == "FAIL") {
       clearInterval(pollInterval);
       popNotificationFunctional(
@@ -270,7 +275,11 @@ export default function Dashboard() {
               }}
               disabled={downloadLink === null && sheetMode != "DONE"}
             >
-              {sheetMode === "WAIT" ? <CircularProgress /> : "Download PDF"}
+              {loading || sheetMode != "DONE" ? (
+                <CircularProgress />
+              ) : (
+                "Download PDF"
+              )}
             </Button>
             <Button
               color="inherit"
