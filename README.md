@@ -1,25 +1,31 @@
-# Create React App example
+# Run Essenvia Task React App
 
-## How to use
+## Initial Setup
 
-Download the example [or clone the repo](https://github.com/mui-org/material-ui):
+### Install Node and NPM
 
-```sh
-curl https://codeload.github.com/mui-org/material-ui/tar.gz/master | tar -xz --strip=2 material-ui-master/examples/create-react-app
-cd create-react-app
-```
+Follow [this guide](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm) to install node and npm.
 
-Install it and run:
+If you prefer `yarn` over `npm` you may install `yarn` via [this link](https://classic.yarnpkg.com/en/docs/install/)
+
+### Setup environment variables
+
+Rename `.env.tech` to `.env` and if you are running your `API` on different port other than `8000` then you might need to update it.
+
+## If using `npm`
 
 ```sh
 npm install
 npm start
 ```
 
-or:
+## If using `yarn`
 
-[![Edit on CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/mui-org/material-ui/tree/master/examples/create-react-app)
+```sh
+yarn
+yarn start
+```
 
-## The idea behind the example
+The react app will start and it will open in your browser window.
 
-This example demonstrates how you can use [Create React App](https://github.com/facebookincubator/create-react-app).
+> In order to run the app, you must also have your [`API Server`](https://github.com/kdpisda/essenvia-task) running on the port specified in the `.env` file. Checkout the repo of [API](https://github.com/kdpisda/essenvia-task) and setup it following the `README.md` file in the repo.
