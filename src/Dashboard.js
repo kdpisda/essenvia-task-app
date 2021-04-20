@@ -16,6 +16,7 @@ import {
   Button,
   TextField,
   Slide,
+  Backdrop,
 } from "@material-ui/core";
 import { useSnackbar } from "notistack";
 import Spreadsheet from "react-spreadsheet";
@@ -32,8 +33,13 @@ import {
   get,
 } from "utils/utilities";
 import { useHistory } from "react-router-dom";
-import { submitData, getDataDetail } from "utils/apis";
+import axios from "axios";
+import { submitData, getDataDetail, getExtendedDataDetail } from "utils/apis";
 import { API_SERVER } from "config";
+
+import CheckCircleIcon from "@material-ui/icons/CheckCircle";
+import CancelIcon from "@material-ui/icons/Cancel";
+import VisibilityIcon from "@material-ui/icons/Visibility";
 
 function Copyright() {
   return (
@@ -53,6 +59,10 @@ const drawerWidth = 240;
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
+  },
+  backdrop: {
+    zIndex: theme.zIndex.drawer + 1,
+    color: "#fff",
   },
   dialogAppBar: {
     position: "relative",
@@ -145,6 +155,7 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 
 export default function Dashboard() {
   const classes = useStyles();
+  const tableRef = React.createRef();
   const { enqueueSnackbar } = useSnackbar();
   const open = false;
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -163,6 +174,9 @@ export default function Dashboard() {
   const history = useHistory();
 
   const [selectedImage, setSelectedImage] = React.useState(null);
+
+  const [dataDialogOpen, setDataDialogOpen] = React.useState(false);
+  const [selectedSheetData, setSelectedSheetData] = React.useState({});
 
   React.useEffect(async () => {
     const hasAlreadyLoggedIn = await isLoggedIn();
@@ -185,6 +199,7 @@ export default function Dashboard() {
         "Congratulations! PDF generated successfully",
         "success"
       );
+      await setLoading(false);
     } else if (data["status"] == "FAIL") {
       clearInterval(pollInterval);
       popNotificationFunctional(
@@ -192,15 +207,18 @@ export default function Dashboard() {
         "Sorry! We could not generate the PDF",
         "error"
       );
+      await setLoading(false);
     }
   }, [data]);
 
-  // const checkDataStatusPoll = async () => {
-  //   console.log(dataID);
-  //   const res = await getDataDetail(dataID);
-  //   let data = get(["data"])(res);
-  //   console.log(data);
-  // };
+  const loadDataDetailHandle = async (dataID) => {
+    await setLoading(true);
+    let res = await getExtendedDataDetail(dataID);
+    let data = get(["data", "data"])(res);
+    await setSelectedSheetData(data);
+    console.log(selectedSheetData);
+    await setLoading(false);
+  };
 
   const createBlankSheet = async () => {
     let column = _.fill(Array(parseInt(sheetColumns)), { value: "" });
@@ -234,7 +252,6 @@ export default function Dashboard() {
     let status = get(["status"])(res);
     if (status !== null && status === 201) {
       const resDataID = get(["data", "data", "id"])(res);
-      await setDataID(resDataID);
       await setSheetMode("WAIT");
       const localPollInterval = setInterval(async () => {
         const res = await getDataDetail(resDataID);
@@ -244,11 +261,14 @@ export default function Dashboard() {
       await setPollInterval(localPollInterval);
     }
 
-    await setLoading(false);
+    // await setLoading(false);
   };
 
   return (
     <div className={classes.root}>
+      <Backdrop className={classes.backdrop} open={loading}>
+        <CircularProgress color="inherit" />
+      </Backdrop>
       <Dialog
         fullScreen
         open={dialogOpen}
@@ -369,6 +389,52 @@ export default function Dashboard() {
           )}
         </DialogContent>
       </Dialog>
+      <Dialog
+        fullScreen
+        open={dataDialogOpen}
+        onClose={async () => {
+          await setDatadialogOpen(false);
+        }}
+        TransitionComponent={Transition}
+      >
+        <AppBar className={classes.dialogAppBar}>
+          <Toolbar>
+            <IconButton
+              edge="start"
+              color="inherit"
+              onClick={async () => {
+                await setDataDialogOpen(false);
+              }}
+              aria-label="close"
+            >
+              <CloseIcon />
+            </IconButton>
+            <Typography variant="h6" className={classes.title}>
+              Showing Data ID: {dataID}
+            </Typography>
+            <Button
+              color="inherit"
+              onClick={() => {
+                if (selectedSheetData["status"] === "FINI") {
+                  window.open(
+                    API_SERVER + selectedSheetData["generated_pdf"],
+                    "_blank"
+                  );
+                }
+              }}
+              disabled={selectedSheetData["status"] != "FINI"}
+            >
+              Download PDF
+            </Button>
+          </Toolbar>
+        </AppBar>
+        <DialogContent>
+          <Spreadsheet
+            style={{ height: "80%", width: "100%" }}
+            data={selectedSheetData["data"]}
+          />
+        </DialogContent>
+      </Dialog>
       <CssBaseline />
       <AppBar
         position="absolute"
@@ -400,43 +466,115 @@ export default function Dashboard() {
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <MaterialTable
-                title="Recent Items"
+                title="Recent Data"
+                tableRef={tableRef}
                 columns={[
-                  { title: "Name", field: "name" },
-                  { title: "Surname", field: "surname" },
+                  { title: "ID", field: "id", editable: "never" },
                   {
-                    title: "Birth Year",
-                    field: "birthYear",
-                    type: "numeric",
+                    title: "Status",
+                    field: "status",
+                    render: (rowData) => {
+                      if (rowData["status"] === "FINI") {
+                        return <CheckCircleIcon />;
+                      } else if (rowData["status"] === "PROG") {
+                        return <CircularProgress />;
+                      } else {
+                        return <CancelIcon />;
+                      }
+                    },
                   },
                   {
-                    title: "Birth Place",
-                    field: "birthCity",
-                    lookup: { 34: "İstanbul", 63: "Şanlıurfa" },
+                    title: "Created At",
+                    field: "created_at",
+                    type: "datetime",
+                  },
+                  {
+                    title: "Last Modified At",
+                    field: "updated_at",
+                    type: "datetime",
+                  },
+                  {
+                    title: "Download PDF",
+                    render: (rowData) => {
+                      return (
+                        <Button
+                          color="inherit"
+                          onClick={() => {
+                            window.open(rowData["generated_pdf"], "_blank");
+                          }}
+                          disabled={rowData["status"] != "FINI"}
+                        >
+                          Download Now
+                        </Button>
+                      );
+                    },
                   },
                 ]}
-                data={[
-                  {
-                    name: "Mehmet",
-                    surname: "Baran",
-                    birthYear: 1987,
-                    birthCity: 63,
-                  },
-                  {
-                    name: "Zerya Betül",
-                    surname: "Baran",
-                    birthYear: 2017,
-                    birthCity: 34,
-                  },
-                ]}
+                data={(query) =>
+                  new Promise((resolve, reject) => {
+                    let url = API_SERVER + "/data/?";
+                    url += "per_page=" + query.pageSize;
+                    url += "&page=" + (query.page + 1);
+                    if (query.search !== null) {
+                      url += "&search=" + query.search;
+                    }
+                    axios
+                      .get(url, {
+                        headers: {
+                          Authorization:
+                            "Bearer " + sessionStorage.getItem("accessToken"),
+                        },
+                      })
+                      .then((result) => {
+                        resolve({
+                          data: result.data.results,
+                          page: query.page,
+                          totalCount: result.data.count,
+                        });
+                      });
+                  })
+                }
                 actions={[
                   {
-                    icon: "save",
-                    tooltip: "Save User",
-                    onClick: (event, rowData) =>
-                      alert("You saved " + rowData.name),
+                    icon: "refresh",
+                    tooltip: "Refresh Data",
+                    isFreeAction: true,
+                    onClick: () =>
+                      tableRef.current && tableRef.current.onQueryChange(),
+                  },
+                  {
+                    icon: () => <VisibilityIcon />,
+                    tooltip: "View Full Data",
+                    onClick: async (event, rowData) => {
+                      await setDataDialogOpen(true);
+                      await setDataID(rowData["id"]);
+                      loadDataDetailHandle(rowData["id"]);
+                    },
                   },
                 ]}
+                options={{
+                  search: false,
+                  exportButton: true,
+                  grouping: false,
+                  pageSize: 50,
+                  pageSizeOptions: [
+                    10,
+                    20,
+                    30,
+                    50,
+                    75,
+                    100,
+                    500,
+                    1000,
+                    2000,
+                    5000,
+                  ],
+                  headerStyle: {
+                    zIndex: 8,
+                  },
+                  maxBodyHeight: 500,
+                  // filtering: true
+                }}
               />
             </Grid>
           </Grid>

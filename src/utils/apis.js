@@ -25,10 +25,10 @@ axios.interceptors.response.use(
     ) {
       return getNewTokens()
         .then(function () {
-          const retryOrigReq = new Promise((resolve, reject) => {
+          const retryOrigReq = new Promise(async (resolve, reject) => {
             try {
               originalRequest.headers["Authorization"] =
-                "Bearer " + localStorage.getItem("accessToken");
+                "Bearer " + (await localStorage.getItem("accessToken"));
               resolve(axios(originalRequest));
               // replace the expired token and retry
             } catch (err) {
@@ -106,4 +106,11 @@ export async function getDataDetail(pk) {
     Authorization: "Bearer " + (await localStorage.getItem("accessToken")),
   };
   return await get("/data/" + pk + "/", headers, {});
+}
+
+export async function getExtendedDataDetail(pk) {
+  let headers = {
+    Authorization: "Bearer " + (await localStorage.getItem("accessToken")),
+  };
+  return await get("/data/" + pk + "/?extended=true", headers, {});
 }
